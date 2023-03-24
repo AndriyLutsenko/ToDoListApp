@@ -45,7 +45,12 @@ class TodoListState extends State<TodoList> {
   void loadTodosave() {
     final data = box.keys.map((key) {
       final value = box.get(key);
-      return {"key": key, "name": value["name"], "checked": value['checked']};
+      return {
+        'key': key,
+        'name': value['name'],
+        'isDone':
+            value['isDone'] ?? false // додати поле isDone, якщо його немає
+      };
     }).toList();
 
     setState(() {
@@ -66,6 +71,16 @@ class TodoListState extends State<TodoList> {
     loadTodosave(); // перезагрузка списку
   }
 
+  // Відмітка про виконання
+  void toggleTodoElement(int todoElementKey) async {
+    final todoElement =
+        todosave.firstWhere((element) => element['key'] == todoElementKey);
+    await updateTodoElement(todoElementKey, {
+      'name': todoElement['name'],
+      'isDone': !todoElement['isDone'] // змінюємо стан на протилежний
+    });
+  }
+
   // Видалення елемента списку
   Future<void> deleteTodoElement(int todoElementKey) async {
     await box.delete(todoElementKey);
@@ -77,8 +92,6 @@ class TodoListState extends State<TodoList> {
   }
 
   final TextEditingController textController = TextEditingController();
-  final TextEditingController _checkedController = TextEditingController();
-  bool checked = false;
 
   //функція для створення та оновлення елементів списку
   void dialog(BuildContext ctx, int? todoElementKey) async {
@@ -89,7 +102,7 @@ class TodoListState extends State<TodoList> {
           todosave.firstWhere((element) => element['key'] == todoElementKey);
       textController.text = existingTodoElement['name'];
     }
-
+    //спливаюче вікно створення/редагування
     showModalBottomSheet(
         context: ctx,
         elevation: 5,
@@ -118,14 +131,12 @@ class TodoListState extends State<TodoList> {
                       if (todoElementKey == null) {
                         addTodoElement({
                           "name": textController.text.trim(),
-                          "checked": true
                         });
                       }
                       // оновлення існуючого
                       if (todoElementKey != null) {
                         updateTodoElement(todoElementKey, {
                           'name': textController.text.trim(),
-                          'checked': checked
                         });
                       }
                       textController.clear();
@@ -162,34 +173,45 @@ class TodoListState extends State<TodoList> {
               itemBuilder: (_, index) {
                 final currentTodoElement = todosave[index];
                 return Card(
-                  color: Colors.yellow,
-                  // margin: const EdgeInsets.all(5),
-                  elevation: 3,
-                  child: ListTile(
-                      title: Text(currentTodoElement['name']),
-                      leading: CircleAvatar(
-                        child: Text(currentTodoElement['name'].isEmpty
-                            ? '?'
-                            : currentTodoElement['name'][0]),
-                      ),
-                      // subtitle: Text(currentTodoElement['checked'].toString()),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Кнопка "Змінити"(ручка)
-                          IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () =>
-                                  dialog(context, currentTodoElement['key'])),
-                          // Кнопка "Видалити" (корзинка)
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () =>
-                                deleteTodoElement(currentTodoElement['key']),
+                    color: Colors.yellow,
+                    // margin: const EdgeInsets.all(5),
+                    elevation: 3,
+                    child: GestureDetector(
+                      onTap: () => toggleTodoElement(currentTodoElement['key']),
+                      child: ListTile(
+                          title: Text(
+                            currentTodoElement['name'],
+                            style: TextStyle(
+                              decoration: currentTodoElement['isDone']
+                                  ? TextDecoration
+                                      .lineThrough // якщо елемент відзначений, то закреслюємо текст
+                                  : null,
+                            ),
                           ),
-                        ],
-                      )),
-                );
+                          leading: currentTodoElement['isDone']
+                              ? const Icon(Icons.check_box_outlined)
+                              : CircleAvatar(
+                                  child: Text(currentTodoElement['name'].isEmpty
+                                      ? '?'
+                                      : currentTodoElement['name'][0]),
+                                ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Кнопка "Змінити"(ручка)
+                              IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => dialog(
+                                      context, currentTodoElement['key'])),
+                              // Кнопка "Видалити" (корзинка)
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => deleteTodoElement(
+                                    currentTodoElement['key']),
+                              ),
+                            ],
+                          )),
+                    ));
               }),
       // Кнопка для виклику меню додавання
       floatingActionButton: FloatingActionButton(
