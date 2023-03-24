@@ -72,7 +72,7 @@ class TodoListState extends State<TodoList> {
   }
 
   // Відмітка про виконання
-  void toggleTodoElement(int todoElementKey) async {
+  Future<void> toggleTodoElement(int todoElementKey) async {
     final todoElement =
         todosave.firstWhere((element) => element['key'] == todoElementKey);
     await updateTodoElement(todoElementKey, {
@@ -117,6 +117,7 @@ class TodoListState extends State<TodoList> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // Center(child: Text(todoElementKey == null ? 'Створити' : 'Змінити')),
                   TextField(
                     controller: textController,
                     decoration: const InputDecoration(
@@ -178,6 +179,8 @@ class TodoListState extends State<TodoList> {
                     elevation: 3,
                     child: GestureDetector(
                       onTap: () => toggleTodoElement(currentTodoElement['key']),
+                      onLongPress: () =>
+                          dialog(context, currentTodoElement['key']),
                       child: ListTile(
                           title: Text(
                             currentTodoElement['name'],
@@ -206,8 +209,36 @@ class TodoListState extends State<TodoList> {
                               // Кнопка "Видалити" (корзинка)
                               IconButton(
                                 icon: const Icon(Icons.delete),
-                                onPressed: () => deleteTodoElement(
-                                    currentTodoElement['key']),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: const Text('Підтвердження'),
+                                        content: const Text(
+                                            'Ви дійсно хочете видалити цей елемент?'),
+                                        actions: <Widget>[
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.red,
+                                            ),
+                                            child: const Text('Видалити'),
+                                            onPressed: () {
+                                              deleteTodoElement(
+                                                  currentTodoElement['key']);
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                          ElevatedButton(
+                                            child: const Text('Скасувати'),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
                               ),
                             ],
                           )),
